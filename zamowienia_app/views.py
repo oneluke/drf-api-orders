@@ -5,6 +5,11 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from .models import Klient, Produkt, Zamowienie, PozycjaZamowienia
 from .serializers import KlientSerializer, ProduktSerializer, ZamowienieSerializer, PozycjaZamowieniaSerializer
 
+from django.db.models.functions import TruncMonth
+from django.db.models import Count, Sum
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+
 class KlientViewSet(viewsets.ModelViewSet):
     queryset = Klient.objects.all()
     serializer_class = KlientSerializer
@@ -24,4 +29,23 @@ class PozycjaZamowieniaViewSet(viewsets.ModelViewSet):
     queryset = PozycjaZamowienia.objects.all()
     serializer_class = PozycjaZamowieniaSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+@api_view(['GET'])
+def zestawienie_miesieczne(request):
+    dane = (
+        Zamowienie.objects.annotate(miesiac=TruncMonth('data_zamowienia'))
+        .values('miesiac')
+        .annotate(
+            liczba_zamowien=Count('id'),
+            laczna_wartosc=Sum('pozycje__cena_sztuka')
+        )
+        .order_by('miesiac')
+    )
+    return Response(dane)
+
+@api_view(['GET'])
+def zamowienia_klienta(request, klient_id):
+    zamowienia = Zamowienie.objects.filter(klient_id=klient_id)
+    serializer = ZamowienieSerializer(zamowienia, many=True)
+    return Response(serializer.data)
 
