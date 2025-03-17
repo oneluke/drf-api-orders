@@ -119,6 +119,19 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',  #logowanie przez /api-auth/login/
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',  #wymagana autoryzacja
+    ]
+}
+
+LOGIN_REDIRECT_URL = '/api/'  
+LOGOUT_REDIRECT_URL = '/api-auth/login/' 
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 

@@ -1,15 +1,15 @@
-from django.shortcuts import render
-
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from django.db.models.functions import TruncMonth
+from django.db.models import Count, Sum
+
 from .models import Klient, Produkt, Zamowienie, PozycjaZamowienia
 from .serializers import KlientSerializer, ProduktSerializer, ZamowienieSerializer, PozycjaZamowieniaSerializer
 
-from django.db.models.functions import TruncMonth
-from django.db.models import Count, Sum
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
 
+# odczyt dla wszystkich, edycja tylko dla zalogowanych
 class KlientViewSet(viewsets.ModelViewSet):
     queryset = Klient.objects.all()
     serializer_class = KlientSerializer
@@ -30,22 +30,32 @@ class PozycjaZamowieniaViewSet(viewsets.ModelViewSet):
     serializer_class = PozycjaZamowieniaSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+
+# endpointy dostępne tylko dla zalogowanych
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def zestawienie_miesieczne(request):
+    """
+    Zwraca liczbę zamówień i łączną wartość zamówień dla każdego miesiąca.
+    """
     dane = (
         Zamowienie.objects.annotate(miesiac=TruncMonth('data_zamowienia'))
         .values('miesiac')
         .annotate(
             liczba_zamowien=Count('id'),
-            laczna_wartosc=Sum('pozycje__cena_sztuka')
+            laczna_wartosc=Sum('pozycje__cena_sztuka') 
         )
         .order_by('miesiac')
     )
     return Response(dane)
 
+
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def zamowienia_klienta(request, klient_id):
+    """
+    Zwraca listę zamówień dla danego klienta.
+    """
     zamowienia = Zamowienie.objects.filter(klient_id=klient_id)
     serializer = ZamowienieSerializer(zamowienia, many=True)
     return Response(serializer.data)
-
